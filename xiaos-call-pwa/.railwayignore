@@ -1,0 +1,6 @@
+node_modules
+.git
+*.mp3
+scripts
+README.md
+CLAUDE.md

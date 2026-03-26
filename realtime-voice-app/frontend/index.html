@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>即時語音對話 — 單一 WebSocket</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>即時語音對話</h1>
+      <p class="subtitle">單一 WebSocket · 語音進 / 語音出</p>
+    </header>
+
+    <section class="connection">
+      <label>WebSocket 位址</label>
+      <div class="input-row">
+        <input type="text" id="wsUrl" value="ws://localhost:8765" placeholder="ws://localhost:8765" />
+        <button type="button" id="btnConnect">連線</button>
+        <button type="button" id="btnDisconnect" disabled>斷線</button>
+      </div>
+      <p id="connectionStatus" class="status">未連線</p>
+    </section>
+
+    <section class="controls">
+      <label>操作</label>
+      <div class="button-row">
+        <button type="button" id="btnMic" disabled title="按住說話 / 點擊切換">
+          🎤 麥克風
+        </button>
+        <button type="button" id="btnSendText" disabled title="用文字測試（不需 ASR）">
+          📝 用文字發送
+        </button>
+      </div>
+      <p id="micStatus" class="status">請先連線</p>
+    </section>
+
+    <section class="transcript">
+      <label>即時內容</label>
+      <div id="transcriptBox" class="transcript-box"></div>
+    </section>
+
+    <footer>
+      <p>後端需運行 Gateway（方案 B）或直連 MiniMax Realtime（方案 A）。</p>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

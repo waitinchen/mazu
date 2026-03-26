@@ -1,0 +1,39 @@
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Python (legacy)
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Audio files
+*.mp3
+*.wav
+*.ogg
+*.m4a
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test artifacts
+pytest_result.json
+
+# Claude Code
+.claude/

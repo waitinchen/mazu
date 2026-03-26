@@ -1,0 +1,16 @@
+{
+  "name": "realtime-voice-gateway",
+  "version": "1.0.0",
+  "description": "單一 WebSocket Gateway：語音進/語音出，內部用 MiniMax Chat + speech_output",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ws": "^8.18.0",
+    "node-fetch": "^3.3.2"
+  }
+}

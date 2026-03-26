@@ -1,0 +1,11 @@
+# 環境變數（含 API Key），勿提交
+.env
+.env.local
+.env.*.local
+
+# 依賴
+node_modules/
+
+# 日誌與暫存
+*.log
+.DS_Store

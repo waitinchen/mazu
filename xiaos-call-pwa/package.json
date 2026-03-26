@@ -1,0 +1,21 @@
+{
+  "name": "mazu-call-pwa",
+  "version": "1.0.0",
+  "description": "MAZU 媽祖娘娘語音通話 PWA",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "chinese-conv": "^4.0.0",
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
