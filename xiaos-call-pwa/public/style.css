@@ -215,6 +215,35 @@ html, body {
 }
 
 /* ========================================
+   LOGIN DIVIDER & GOOGLE SIGN-IN
+   ======================================== */
+.login-divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin: var(--space-lg) 0;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.login-divider span {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.google-signin-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ========================================
    AVATAR CIRCLES
    ======================================== */
 .avatar-circle {

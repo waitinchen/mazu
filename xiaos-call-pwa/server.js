@@ -41,6 +41,10 @@ const OPENAI_API_KEY  = process.env.OPENAI_API_KEY  || '';
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY  || '';
 const MINIMAX_GROUP_ID= process.env.MINIMAX_GROUP_ID || '';
 const MINIMAX_VOICE_ID= process.env.MINIMAX_VOICE_ID || 'moss_audio_d739901e-1d39-11f1-9b14-6299e7260fda';
+const GOOGLE_CLIENT_ID= process.env.GOOGLE_CLIENT_ID || '';
+
+// ── Google OAuth token store (in-memory) ─────────────────────────────────
+const googleTokens = new Map(); // token → { email, name }
 
 // OpenAI Realtime 端點
 const OAI_REALTIME_URL = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview';
@@ -675,6 +679,44 @@ const server = createServer((req, res) => {
     return;
   }
 
+  if (url === '/api/auth/config') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ googleClientId: GOOGLE_CLIENT_ID || null }));
+    return;
+  }
+
+  if (url === '/api/auth/google' && req.method === 'POST') {
+    let body = ''; req.on('data', c => body += c);
+    req.on('end', async () => {
+      res.setHeader('Content-Type', 'application/json');
+      try {
+        const { credential } = JSON.parse(body || '{}');
+        if (!credential || !GOOGLE_CLIENT_ID) {
+          res.writeHead(400); res.end(JSON.stringify({ message: 'Google login not available' })); return;
+        }
+        // Verify ID token with Google
+        const verifyRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        if (!verifyRes.ok) {
+          res.writeHead(401); res.end(JSON.stringify({ message: 'Invalid Google token' })); return;
+        }
+        const payload = await verifyRes.json();
+        if (payload.aud !== GOOGLE_CLIENT_ID) {
+          res.writeHead(401); res.end(JSON.stringify({ message: 'Token audience mismatch' })); return;
+        }
+        const email = payload.email;
+        const name  = payload.name || email.split('@')[0];
+        const token = 'mazu-g-' + createHash('sha256').update(email).digest('hex').slice(0, 16);
+        googleTokens.set(token, { email, name });
+        console.log('[AUTH] Google login:', email);
+        res.writeHead(200); res.end(JSON.stringify({ token, username: name }));
+      } catch (err) {
+        console.error('[AUTH] Google verify error:', err.message);
+        res.writeHead(500); res.end(JSON.stringify({ message: 'Server error' }));
+      }
+    });
+    return;
+  }
+
   if (url === '/api/auth/login' && req.method === 'POST') {
     let body = ''; req.on('data', c => body += c);
     req.on('end', () => {
@@ -708,9 +750,10 @@ const wss = new WebSocketServer({ server, path: '/voice' });
 wss.on('connection', (ws, req) => {
   const u     = new URL(req.url || '', 'http://localhost');
   const token = u.searchParams.get('token');
-  if (token !== AUTH_TOKEN) { ws.close(4001, 'Unauthorized'); return; }
+  if (token !== AUTH_TOKEN && !googleTokens.has(token)) { ws.close(4001, 'Unauthorized'); return; }
 
-  const callerName = (u.searchParams.get('name') || FIXED_USERNAME).toUpperCase();
+  const googleUser = googleTokens.get(token);
+  const callerName = googleUser ? googleUser.name : (u.searchParams.get('name') || FIXED_USERNAME).toUpperCase();
   callerNames.set(ws, callerName);
   isTtsPlaying.set(ws, false);
   audioLogMap.set(ws, 0);

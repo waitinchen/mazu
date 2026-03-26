@@ -586,5 +586,52 @@
 
   initInstallPrompt();
   checkAuth();
+
+  // ── Google Sign-In ────────────────────────────────────────────
+  (async function initGoogleSignIn() {
+    try {
+      const cfgRes = await fetch(getApiBase() + '/api/auth/config');
+      const cfg = await cfgRes.json();
+      if (!cfg.googleClientId) return; // Google login not configured
+      // Wait for GIS library to load
+      function onGisLoad() {
+        google.accounts.id.initialize({
+          client_id: cfg.googleClientId,
+          callback: handleGoogleCredential,
+          auto_select: false,
+        });
+        google.accounts.id.renderButton(
+          document.getElementById('g_id_signin'),
+          { theme: 'filled_black', size: 'large', width: 280, text: 'signin_with', shape: 'pill' }
+        );
+      }
+      if (window.google?.accounts?.id) onGisLoad();
+      else window.addEventListener('load', () => {
+        const check = setInterval(() => {
+          if (window.google?.accounts?.id) { clearInterval(check); onGisLoad(); }
+        }, 200);
+        setTimeout(() => clearInterval(check), 10000);
+      });
+    } catch { /* Google login unavailable */ }
+  })();
+
+  async function handleGoogleCredential(response) {
+    loginError.textContent = '';
+    try {
+      const res = await fetch(getApiBase() + '/api/auth/google', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.token) {
+        setToken(data.token, data.username);
+        userNameEl.textContent = data.username;
+        showPage(pageHome);
+      } else {
+        loginError.textContent = data.message || 'Google 登入失敗';
+      }
+    } catch { loginError.textContent = '網路錯誤，請稍後再試'; }
+  }
+
   console.log('%c🎙 MAZU Voice Call', 'color:#D4912A;font-weight:bold;font-size:14px');
 })();
