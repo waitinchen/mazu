@@ -49,7 +49,7 @@
   const transcriptToggle  = $('transcript-toggle');
   const callWrapper     = document.querySelector('.call-wrapper');
 
-  let ttsEngine = localStorage.getItem(TTS_ENGINE_KEY) || 'minimax';
+  let ttsEngine = localStorage.getItem(TTS_ENGINE_KEY) || 'elevenlabs';
   let ws = null, wsReady = false, callState = 'idle';
   let intentionalClose = false, reconnectAttempts = 0, reconnectTimer = null;
   const MAX_RECONNECT = 5;

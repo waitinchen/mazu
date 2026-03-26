@@ -142,6 +142,7 @@ const WHISPER_HALLUCINATIONS = [
   '字幕製作', '字幕制作',
   // 影片訂閱套話（完整句才擋，不擋單一關鍵字）
   '請不吝點讚訂閱轉發打賞支持明鏡與點點欄目',
+  '请不吝点赞订阅转发打赏支持明镜与点点栏目',
   '喜歡的話請按讚', '喜欢的话请点赞',
   '更多精彩內容', '更多精彩内容',
   // 英文幻覺
@@ -149,12 +150,13 @@ const WHISPER_HALLUCINATIONS = [
   'please subscribe',
   'like and subscribe',
 ];
-const HALLUCINATION_SET = new Set(WHISPER_HALLUCINATIONS.map(s => s.toLowerCase().trim()));
+// 統一轉簡體再比對，避免繁簡不一致導致穿透
+const HALLUCINATION_SET = new Set(WHISPER_HALLUCINATIONS.map(s => sify(s).toLowerCase().trim()));
 
 function isValidTranscript(text) {
   if (!text || !text.trim()) return false;
   const t = text.trim();
-  const tLower = t.toLowerCase();
+  const tLower = sify(t).toLowerCase();
 
   // 完全匹配已知 Whisper 幻覺句
   if (HALLUCINATION_SET.has(tLower)) {
@@ -164,7 +166,8 @@ function isValidTranscript(text) {
 
   // 部分匹配（長幻覺句被包含在轉錄中，≥6 字才匹配避免誤殺）
   for (const h of WHISPER_HALLUCINATIONS) {
-    if (h.length >= 6 && tLower.includes(h)) {
+    const hSimp = sify(h).toLowerCase();
+    if (hSimp.length >= 6 && tLower.includes(hSimp)) {
       console.log('[Filter] Rejected (partial hallucination):', t);
       return false;
     }
