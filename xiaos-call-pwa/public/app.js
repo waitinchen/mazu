@@ -9,6 +9,7 @@
 
   const TOKEN_KEY = 'mazu_token';
   const USER_KEY  = 'mazu_user';
+  const TTS_ENGINE_KEY = 'mazu_tts_engine';
 
   const $ = id => document.getElementById(id);
   const pageLogin       = $('page-login');
@@ -37,6 +38,8 @@
   const ttsIndicator    = $('tts-indicator');
   const sttIndicator    = $('stt-indicator');
   const micIndicator    = $('mic-indicator');
+  const ttsToggle       = $('tts-engine-toggle');
+  const ttsToggleLabel  = $('tts-engine-label');
   const installBanner   = $('install-banner');
   const btnInstall      = $('btn-install');
   const btnDismissInstall = $('btn-dismiss-install');
@@ -46,6 +49,7 @@
   const transcriptToggle  = $('transcript-toggle');
   const callWrapper     = document.querySelector('.call-wrapper');
 
+  let ttsEngine = localStorage.getItem(TTS_ENGINE_KEY) || 'minimax';
   let ws = null, wsReady = false, callState = 'idle';
   let intentionalClose = false, reconnectAttempts = 0, reconnectTimer = null;
   const MAX_RECONNECT = 5;
@@ -91,7 +95,15 @@
   }
   function checkAuth() {
     const token = getToken();
-    if (token) { userNameEl.textContent = localStorage.getItem(USER_KEY) || '用戶'; showPage(pageHome); }
+    if (token) {
+      userNameEl.textContent = localStorage.getItem(USER_KEY) || '用戶';
+      showPage(pageHome);
+      // Init TTS toggle
+      if (ttsToggle) {
+        ttsToggle.checked = ttsEngine === 'elevenlabs';
+        if (ttsToggleLabel) ttsToggleLabel.textContent = ttsEngine === 'elevenlabs' ? '11Labs' : 'MiniMax';
+      }
+    }
     else showPage(pageLogin);
   }
   let streamingLine = null; // reuse same line for streaming assistant deltas
@@ -133,7 +145,8 @@
       const data = await fetch(getApiBase() + '/api/health').then(r => r.json());
       healthDot.className = 'health-dot online'; healthText.textContent = '連線正常';
       if (llmIndicator) llmIndicator.className = 'key-indicator ' + (data.llm ? 'ok' : 'fail');
-      if (ttsIndicator) ttsIndicator.className = 'key-indicator ' + (data.tts ? 'ok' : 'fail');
+      const activeTtsOk = ttsEngine === 'elevenlabs' ? data.tts_elevenlabs : data.tts_minimax;
+      if (ttsIndicator) ttsIndicator.className = 'key-indicator ' + ((activeTtsOk ?? data.tts) ? 'ok' : 'fail');
       if (sttIndicator) sttIndicator.className = 'key-indicator ' + (data.stt ? 'ok' : 'fail');
     } catch { healthDot.className = 'health-dot offline'; healthText.textContent = '無法連線'; }
     // MIC check
@@ -440,6 +453,7 @@
     ws.onopen = () => {
       wsReady = true; reconnectAttempts = 0;
       if (callState !== 'ringing') setCallState('connected');
+      ws.send(JSON.stringify({ type: 'tts_engine', engine: ttsEngine }));
     };
     ws.onmessage = (ev) => {
       if (typeof ev.data !== 'string') return;
@@ -546,6 +560,15 @@
   });
 
   btnLogout.addEventListener('click', () => { setToken(null); disconnectVoice(); showPage(pageLogin); inputPassword.value=''; });
+
+  // TTS Engine toggle
+  if (ttsToggle) ttsToggle.addEventListener('change', () => {
+    ttsEngine = ttsToggle.checked ? 'elevenlabs' : 'minimax';
+    localStorage.setItem(TTS_ENGINE_KEY, ttsEngine);
+    if (ttsToggleLabel) ttsToggleLabel.textContent = ttsToggle.checked ? '11Labs' : 'MiniMax';
+    if (ws && wsReady) ws.send(JSON.stringify({ type: 'tts_engine', engine: ttsEngine }));
+    pollHealth();
+  });
 
   btnCall.addEventListener('click', () => {
     transcriptBox.innerHTML = ''; streamingLine = null;

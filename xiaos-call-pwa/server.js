@@ -42,6 +42,9 @@ const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY  || '';
 const MINIMAX_GROUP_ID= process.env.MINIMAX_GROUP_ID || '';
 const MINIMAX_VOICE_ID= process.env.MINIMAX_VOICE_ID || 'moss_audio_d739901e-1d39-11f1-9b14-6299e7260fda';
 const GOOGLE_CLIENT_ID= process.env.GOOGLE_CLIENT_ID || '';
+const ELEVENLABS_API_KEY  = process.env.ELEVENLABS_API_KEY  || '';
+const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '';
+const ELEVENLABS_MODEL_ID = process.env.ELEVENLABS_MODEL_ID || 'eleven_flash_v2_5';
 
 // ── Google OAuth token store (in-memory) ─────────────────────────────────
 const googleTokens = new Map(); // token → { email, name }
@@ -208,6 +211,7 @@ const ttsAbortMap     = new Map(); // ws → AbortController
 const audioLogMap     = new Map(); // ws → frame count
 const fullTextMap     = new Map(); // ws → accumulated full response text (for fact extraction)
 const ttsActiveMap    = new Map(); // ws → bool (entire TTS queue active, server-side mute)
+const ttsEngineMap    = new Map(); // ws → 'minimax' | 'elevenlabs'
 
 // ── Cross-call conversation history (keyed by callerName) ─────────────────
 // OpenAI Realtime 本身維護 session 內的 context，
@@ -252,7 +256,8 @@ function startSilenceTimer(ws) {
     console.log(`[WS] Silence nudge #${count + 1}/${MAX_SILENCE_NUDGES}${isLast ? ' → hanging up' : ''}`);
 
     ttsActiveMap.set(ws, true);
-    await miniMaxTTS(ws, sify(nudge.text), nudge.emotion);
+    const nudgeTtsFn = (ttsEngineMap.get(ws) || 'minimax') === 'elevenlabs' ? elevenLabsTTS : miniMaxTTS;
+    await nudgeTtsFn(ws, sify(nudge.text), nudge.emotion);
     ttsActiveMap.set(ws, false);
 
     if (isLast) {
@@ -350,6 +355,61 @@ async function miniMaxTTS(ws, rawText, emotion, abortSignal) {
   });
 }
 
+// ── ElevenLabs TTS — HTTP streaming ───────────────────────────────────────
+async function elevenLabsTTS(ws, rawText, emotion, abortSignal) {
+  if (abortSignal?.aborted) return 0;
+  const text = rawText?.replace(EMOTION_RE_G, '').replace(FACT_RE, '').trim();
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_VOICE_ID || !text) return 0;
+  send(ws, { type: 'status', state: 'speaking' });
+  isTtsPlaying.set(ws, true);
+
+  let chunkCount = 0;
+  const fetchCtrl = new AbortController();
+  const onAbort = () => { fetchCtrl.abort(); };
+  if (abortSignal) abortSignal.addEventListener('abort', onAbort, { once: true });
+
+  const timeout = setTimeout(() => {
+    console.log('[11Labs] Timeout for:', text.slice(0, 30));
+    fetchCtrl.abort();
+  }, 15000);
+
+  try {
+    const resp = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`,
+      {
+        method: 'POST',
+        headers: { 'xi-api-key': ELEVENLABS_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          model_id: ELEVENLABS_MODEL_ID,
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        }),
+        signal: fetchCtrl.signal,
+      }
+    );
+    if (!resp.ok) {
+      console.error('[11Labs] HTTP', resp.status, await resp.text().catch(() => ''));
+      return 0;
+    }
+    for await (const chunk of resp.body) {
+      if (fetchCtrl.signal.aborted) break;
+      if (chunk.length > 0) {
+        chunkCount++;
+        send(ws, { type: 'audio', data: Buffer.from(chunk).toString('base64') });
+      }
+    }
+    console.log('[11Labs] Done:', chunkCount, 'chunks, text:', text.slice(0, 40));
+    send(ws, { type: 'audio_end' });
+  } catch (e) {
+    if (e.name !== 'AbortError') console.error('[11Labs] Error:', e.message);
+  } finally {
+    clearTimeout(timeout);
+    if (abortSignal) abortSignal.removeEventListener('abort', onAbort);
+    isTtsPlaying.set(ws, false);
+  }
+  return chunkCount;
+}
+
 // ── OpenAI Realtime connection ─────────────────────────────────────────────
 function createOaiConnection(ws, callerName, attempt = 0) {
   if (!OPENAI_API_KEY) { console.error('[OAI] No OPENAI_API_KEY'); return; }
@@ -403,11 +463,13 @@ function createOaiConnection(ws, callerName, attempt = 0) {
     while (ttsQueue.length > 0) {
       const { text, emotion, signal } = ttsQueue.shift();
       if (signal?.aborted) continue;
-      const chunks = await miniMaxTTS(wsRef, text, emotion, signal);
+      const engine = ttsEngineMap.get(ws) || 'minimax';
+      const ttsFn = engine === 'elevenlabs' ? elevenLabsTTS : miniMaxTTS;
+      const chunks = await ttsFn(wsRef, text, emotion, signal);
       // 連線失敗（0 chunks）→ 重試一次
       if (chunks === 0 && !signal?.aborted) {
         console.log('[TTS] Retry:', text.slice(0, 30));
-        await miniMaxTTS(wsRef, text, emotion, signal);
+        await ttsFn(wsRef, text, emotion, signal);
       }
       if (signal?.aborted) { ttsQueue.length = 0; break; }
     }
@@ -673,6 +735,7 @@ const server = createServer((req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       llm: !!OPENAI_API_KEY, tts: !!MINIMAX_API_KEY,
+      tts_minimax: !!MINIMAX_API_KEY, tts_elevenlabs: !!ELEVENLABS_API_KEY,
       stt: !!OPENAI_API_KEY,
       connections: wss.clients.size,
     }));
@@ -815,6 +878,13 @@ wss.on('connection', (ws, req) => {
         return;
       }
 
+      if (msg.type === 'tts_engine') {
+        const engine = msg.engine === 'elevenlabs' ? 'elevenlabs' : 'minimax';
+        ttsEngineMap.set(ws, engine);
+        console.log('[WS] TTS engine set to:', engine);
+        return;
+      }
+
       if (msg.type === 'text' && msg.text?.trim()) {
         // Manual text input (testing fallback)
         const oaiWs = oaiWsMap.get(ws);
@@ -845,6 +915,7 @@ wss.on('connection', (ws, req) => {
     audioLogMap.delete(ws);
     fullTextMap.delete(ws);
     ttsActiveMap.delete(ws);
+    ttsEngineMap.delete(ws);
     // conversationHistory persists by callerName for next call
   });
 

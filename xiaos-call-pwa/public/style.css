@@ -373,6 +373,58 @@ html, body {
   color: var(--danger);
 }
 
+/* TTS Engine Toggle */
+.tts-engine-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: var(--space-xs) 0;
+}
+.tts-engine-switch__label {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+.tts-engine-switch__name {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  min-width: 52px;
+}
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  bottom: 2px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--neon-green);
+}
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+  background: var(--white);
+}
+
 .user-label {
   font-size: 0.8rem;
   color: var(--text-secondary);
