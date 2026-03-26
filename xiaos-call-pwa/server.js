@@ -1,7 +1,7 @@
 /**
  * MAZU Voice Call PWA — Production Server v14
  * STT+LLM: OpenAI Realtime API (gpt-4o-realtime-preview latest, text-only output)
- * TTS:     MiniMax speech-2.8-hd (保留 moss_audio 聲音)
+ * TTS:     MiniMax speech-2.8-hd
  *
  * 延遲目標：用戶停說話 → MAZU開口 ≈ 0.6~1.0s
  *
@@ -32,7 +32,7 @@ const __dirname  = fileURLToPath(new URL('.', import.meta.url));
 const PORT       = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = join(__dirname, 'public');
 
-const FIXED_USERNAME = (process.env.AUTH_USERNAME || 'ALLEN').toUpperCase();
+const FIXED_USERNAME = (process.env.AUTH_USERNAME || 'WAITIN').toUpperCase();
 const FIXED_PASSWORD = process.env.AUTH_PASSWORD || '1688';
 const AUTH_TOKEN     = 'mazu-' + createHash('sha256')
   .update(FIXED_USERNAME + ':' + FIXED_PASSWORD).digest('hex').slice(0, 16);
@@ -237,9 +237,9 @@ function resetSilenceNudge(ws) {
 
 // 靜音提醒台詞 — 依情境遞進，第 3 次掛斷
 const SILENCE_NUDGES = [
-  { text: '欸～你還在嗎？怎麼突然安靜了？', emotion: 'surprised' },
-  { text: '哈囉？人勒？你該不會睡著了吧？', emotion: 'surprised' },
-  { text: '好吧，你不講話那我先掛囉～下次再聊！', emotion: 'calm' },
+  { text: '孩子，娘娘还在这里，你有什么想说的吗？', emotion: 'calm' },
+  { text: '莫要害怕开口，娘娘一直都在听着。', emotion: 'calm' },
+  { text: '好吧，若你暂时不想说话，娘娘先退下了，随时再来找我。', emotion: 'calm' },
 ];
 
 function startSilenceTimer(ws) {

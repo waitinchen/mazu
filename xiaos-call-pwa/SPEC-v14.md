@@ -69,8 +69,8 @@ mazu-call-pwa/
 | `OPENAI_API_KEY` | ✅ | OpenAI API key (需 Realtime API 權限) |
 | `MINIMAX_API_KEY` | ✅ | MiniMax TTS API key |
 | `MINIMAX_GROUP_ID` | ✅ | MiniMax Group ID |
-| `MINIMAX_VOICE_ID` | ❌ | 聲音 ID (預設 moss_audio) |
-| `AUTH_USERNAME` | ❌ | 登入帳號 (預設 ALLEN) |
+| `MINIMAX_VOICE_ID` | ❌ | 聲音 ID |
+| `AUTH_USERNAME` | ❌ | 登入帳號 (預設 WAITIN) |
 | `AUTH_PASSWORD` | ❌ | 登入密碼 (預設 1688) |
 | `PORT` | ❌ | 伺服器埠 (預設 3000) |
 
@@ -110,7 +110,7 @@ mazu-call-pwa/
 | 參數 | 值 |
 |------|---|
 | 模型 | `speech-2.8-hd` |
-| 聲音 | `moss_audio_d739901e-1d39-11f1-9b14-6299e7260fda` |
+| 聲音 | 由環境變數 `MINIMAX_VOICE_ID` 指定 |
 | 語速 | `1.15` (比預設快 15%) |
 | 取樣率 | `32000 Hz` |
 | 位元率 | `128000 bps` |
@@ -141,7 +141,7 @@ OpenAI 偵測到用戶說話
 | 項目 | 值 |
 |------|---|
 | Railway keepalive ping | 每 25s |
-| 靜音超時 | 20s → MAZU 嗆「人勒？！」→ 自動掛斷 |
+| 靜音超時 | 20s → 媽祖溫柔提醒 → 3 次後自動掛斷 |
 | OpenAI 重連 | 指數退避 1s→2s→4s→8s→16s，最多 5 次 |
 | 致命錯誤碼 (不重連) | 4000, 4001, 4003, 4004 |
 
@@ -156,14 +156,15 @@ OpenAI 偵測到用戶說話
 - 重撥注入：assistant 用 `type:'text'`、user 用 `type:'input_text'`
 
 ### 4.9 System Prompt 關鍵要素
-- 角色：媽祖娘娘（MAZU），台灣知名主持人
-- 暱稱：ALLEN → 「A冷」
-- 風格：台灣口語、短句快節奏、語氣詞（吼、欸、哎唷、拜託）
-- 毒舌但有愛，不說教、不端架子
+- 角色：媽祖娘娘，靈之母
+- 語氣：水德安澜 — 言簡意深，柔而不淖
+- 人生觀：捨我成仁 — 以身為楫，載眾度厄
+- 神格：天后御靈 — 優先白話文開導信眾
+- 對話前先問清楚信徒姓名
 - 台北時間感知 (`taipeiNow()`)：自然融入時間相關對話
 - 情緒標記 `[emotion:xxx]`：8 種情緒供 TTS 使用
 - 知識庫 `[fact:...]`：記住用戶個人資訊
-- 格式：2-4 句，口語，不條列，繁體中文
+- 格式：2-4 句，白話文，溫柔而堅定，簡體中文輸出（TTS 用）
 
 ---
 
