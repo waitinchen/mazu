@@ -2,10 +2,10 @@ FROM node:20-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY xiaos-call-pwa/package.json xiaos-call-pwa/package-lock.json* ./
 RUN npm ci --omit=dev
 
-COPY . ./
+COPY xiaos-call-pwa/ ./
 
 EXPOSE 3000
 
