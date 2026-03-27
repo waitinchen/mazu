@@ -39,7 +39,7 @@
   const sttIndicator    = $('stt-indicator');
   const micIndicator    = $('mic-indicator');
   const ttsToggle       = $('tts-engine-toggle');
-  const ttsToggleLabel  = $('tts-engine-label');
+  // ttsToggleLabel removed — toggle only, no text
   const installBanner   = $('install-banner');
   const btnInstall      = $('btn-install');
   const btnDismissInstall = $('btn-dismiss-install');
@@ -101,7 +101,7 @@
       // Init TTS toggle
       if (ttsToggle) {
         ttsToggle.checked = ttsEngine === 'elevenlabs';
-        if (ttsToggleLabel) ttsToggleLabel.textContent = ttsEngine === 'elevenlabs' ? '11Labs' : 'MiniMax';
+        // label removed
       }
     }
     else showPage(pageLogin);
@@ -565,7 +565,7 @@
   if (ttsToggle) ttsToggle.addEventListener('change', () => {
     ttsEngine = ttsToggle.checked ? 'elevenlabs' : 'minimax';
     localStorage.setItem(TTS_ENGINE_KEY, ttsEngine);
-    if (ttsToggleLabel) ttsToggleLabel.textContent = ttsToggle.checked ? '11Labs' : 'MiniMax';
+    // label removed
     if (ws && wsReady) ws.send(JSON.stringify({ type: 'tts_engine', engine: ttsEngine }));
     pollHealth();
   });
